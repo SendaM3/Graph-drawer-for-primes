@@ -9,9 +9,13 @@
 #include <chrono>
 #include <string>
 #include <iomanip>
+#include <thread>
+#include <mutex>
 
-using namespace std;
 using namespace std::chrono;
+using namespace std;
+std::mutex mtx;
+int ypos{ 780 };
 
 string display(std::chrono::nanoseconds ns)
 {
@@ -61,7 +65,7 @@ bool IsPrime(unsigned long long int n)
     return true;
 }
 
-double calcPrimes( unsigned long long int targetPrimes)
+double calcPrimes(unsigned long long int targetPrimes, vector<sf::CircleShape>& pointList, int index)
 {
     vector<unsigned long long int> primes;
     int first = 0;
@@ -70,6 +74,9 @@ double calcPrimes( unsigned long long int targetPrimes)
     unsigned long long int numberLineExtended = 0;
     unsigned long long int numofPrimes = 0;
     double averageGap = 0;
+    auto startTime = high_resolution_clock::now();
+    int step = 80;
+    int ypos = 780;
 
     while (true)
     {
@@ -79,7 +86,7 @@ double calcPrimes( unsigned long long int targetPrimes)
             primes.push_back(numberLineExtended);
         };
 
-        if (numofPrimes > targetPrimes)
+        if (numofPrimes > (targetPrimes-1))
         {
             break;
         };
@@ -92,30 +99,31 @@ double calcPrimes( unsigned long long int targetPrimes)
         first += 1;
         second += 1;
     };
-    averageGap = (primeGaps / (targetPrimes+1));
-    cout << endl << "Average prime gap between 0 and " << (targetPrimes+1) << ": " << averageGap;
-    cout << endl << "Amount of numbers to find "  << (targetPrimes+1) << " primes: " << numberLineExtended << endl;
+    mtx.lock();
+    averageGap = (primeGaps / (targetPrimes));
+    pointList[index].move(((averageGap * step) + 140), ypos - 80 * index);
+    cout << endl << "Average prime gap between 0 and " << (targetPrimes) << ": " << averageGap;
+    cout << endl << "Amount of numbers to find "  << (targetPrimes) << " primes: " << numberLineExtended << endl;
+    auto stopTime = high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<nanoseconds>(stopTime - startTime);
+    std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration)) << endl;
+    mtx.unlock();
     return averageGap;
 }; 
+
+class comma_numpunct : public std::numpunct<char>
+{
+protected:
+    virtual char do_thousands_sep() const { return ','; }
+    virtual std::string do_grouping() const { return "\03"; }
+};
 int main()
 {
     //Declare window
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "Graph drawer");
+    std::locale comma_locale(std::locale(), new comma_numpunct());
+    std::cout.imbue(comma_locale);
 
-    //Declare variables
-    bool firstDone  { false };
-    bool secondDone { false };
-    bool thirdDone  { false };
-    bool fourthDone { false };
-    bool fifthDone  { false };
-    bool sixthDone  { false };
-    bool seventhDone{ false };
-    bool eightDone  { false };
-
-    int ypos         {780}; 
-    int step         { 80};
-    double averageGap{  0};
-  
     // Initiate textures
     sf::Texture graphTexture;
     if (!graphTexture.loadFromFile("graph.png")) {}
@@ -130,30 +138,22 @@ int main()
     algorithmSprite.move(800, 35);
 
     // Make graph points
-    sf::CircleShape point1(50); 
-    point1.setFillColor(sf::Color(0, 0, 0));
-    point1.setScale(0.2,0.2);
-    sf::CircleShape point2(50);
-    point2.setFillColor(sf::Color(0, 0, 0));
-    point2.setScale(0.2, 0.2);
-    sf::CircleShape point3(50);
-    point3.setFillColor(sf::Color(0, 0, 0));
-    point3.setScale(0.2, 0.2);
-    sf::CircleShape point4(50);
-    point4.setFillColor(sf::Color(0, 0, 0));
-    point4.setScale(0.2, 0.2);
-    sf::CircleShape point5(50);
-    point5.setFillColor(sf::Color(0, 0, 0));
-    point5.setScale(0.2, 0.2);
-    sf::CircleShape point6(50);
-    point6.setFillColor(sf::Color(0, 0, 0));
-    point6.setScale(0.2, 0.2);
-    sf::CircleShape point7(50);
-    point7.setFillColor(sf::Color(0, 0, 0));
-    point7.setScale(0.2, 0.2);
-    sf::CircleShape point8(50);
-    point8.setFillColor(sf::Color(0, 0, 0));
-    point8.setScale(0.2, 0.2);
+    vector<sf::CircleShape> pointList;
+    for (size_t i = 0; i < 8; i++)
+    {
+        sf::CircleShape point(50);
+        point.setFillColor(sf::Color(0, 0, 0));
+        point.setScale(0.2, 0.2);
+        pointList.push_back(point);
+    }
+    
+    int target = 10;
+    vector<std::thread> threads;
+    for (int i = 0; i <= 7; i++)
+    {
+        threads.push_back(std::thread(calcPrimes, target, std::ref(pointList), i));
+        target = (target * 10);
+    }; 
 
     // run the program as long as the window is open
     while (window.isOpen())
@@ -168,192 +168,15 @@ int main()
 
             window.clear();
             window.draw(graphSprite);
-           
-            auto startTime = high_resolution_clock::now();
-            if (firstDone == false)
-            {
-                averageGap = calcPrimes(9);
-                point1.move(((averageGap * step) + 140), ypos);
-                ypos -= 80;
-            };
-
-            firstDone = true;
-            auto stopTime = high_resolution_clock::now();
-            auto duration = std::chrono::duration_cast<nanoseconds>(stopTime - startTime);
-            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration)) << endl;
-  
-            window.display();
-            window.clear();
-            window.draw(graphSprite);
             window.draw(algorithmSprite);
-            window.draw(point1);
-            window.display();
-            
-            auto startTime1 = high_resolution_clock::now();
-            if (secondDone == false)
+
+            mtx.lock();
+            for (size_t i = 0; i < 8; i++)
             {
-                averageGap = calcPrimes(99);
-                point2.move(((averageGap * step) + 140), ypos);
-                ypos -= 80;
+                window.draw(pointList[i]);
             };
-            auto stopTime1 = high_resolution_clock::now();
-            auto duration1 = std::chrono::duration_cast<nanoseconds>(stopTime1 - startTime1);
-            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration1)) << endl;
+            mtx.unlock();
 
-            secondDone = true;
-        
-            window.display();
-            window.clear();
-            window.draw(graphSprite);
-            window.draw(algorithmSprite);
-            window.draw(point1);
-            window.draw(point2);
-            window.display();
-            
-            auto startTime2 = high_resolution_clock::now();
-            if (thirdDone == false)
-            {
-                averageGap = calcPrimes(999);
-                point3.move(((averageGap * step) + 140), ypos);
-                ypos -= 80;
-            };
-
-            thirdDone = true;
-            auto stopTime2 = high_resolution_clock::now();
-            auto duration2 = std::chrono::duration_cast<nanoseconds>(stopTime2 - startTime2);
-            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration2)) << endl;
-             
-            window.display();
-            window.clear();
-            window.draw(graphSprite);
-            window.draw(algorithmSprite);
-            window.draw(point1);
-            window.draw(point2);
-            window.draw(point3);
-            window.display();
-
-            auto startTime3 = high_resolution_clock::now();
-            if (fourthDone == false)
-            {
-                averageGap = calcPrimes(9999);
-                point4.move(((averageGap * step) + 140), ypos);
-                ypos -= 80;
-            };
-            fourthDone = true;
-            auto stopTime3 = high_resolution_clock::now();
-            auto duration3 = std::chrono::duration_cast<nanoseconds>(stopTime3 - startTime3);
-            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration3)) << endl;
-
-            window.display();
-            window.clear();
-            window.draw(graphSprite);
-            window.draw(algorithmSprite);
-            window.draw(point1);
-            window.draw(point2);
-            window.draw(point3);
-            window.draw(point4);
-            window.display();
-
-            auto startTime4 = high_resolution_clock::now();
-            if (fifthDone == false)
-            {
-                averageGap = calcPrimes(99999);
-                point5.move(((averageGap * step) + 140), ypos);
-                ypos -= 80;
-            };
-            fifthDone = true;
-            auto stopTime4 = high_resolution_clock::now();
-            auto duration4 = std::chrono::duration_cast<nanoseconds>(stopTime4 - startTime4);
-            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration4)) << endl;
-
-            window.display();
-            window.clear();
-            window.draw(graphSprite);
-            window.draw(algorithmSprite);
-            window.draw(point1);
-            window.draw(point2);
-            window.draw(point3);
-            window.draw(point4);
-            window.draw(point5);
-            window.display();
-
-
-            auto startTime5 = high_resolution_clock::now();
-            if (sixthDone == false)
-            {
-                averageGap = calcPrimes(999999);
-                point6.move(((averageGap * step) + 140), ypos);
-                ypos -= 80;
-            };
-            sixthDone = true;
-
-            auto stopTime5 = high_resolution_clock::now();
-            auto duration5 = std::chrono::duration_cast<nanoseconds>(stopTime5 - startTime5);
-            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration5)) << endl;
-          
-            window.display();
-            window.clear();
-            window.draw(graphSprite);
-            window.draw(algorithmSprite);
-            window.draw(point1);
-            window.draw(point2);
-            window.draw(point3);
-            window.draw(point4);
-            window.draw(point5);
-            window.draw(point6);
-            window.display();
-            
-            auto startTime6 = high_resolution_clock::now();
-            if (seventhDone == false)
-            {
-                averageGap = calcPrimes(9999999);
-                point7.move(((averageGap * step) + 140), ypos);
-                ypos -= 80;
-            };
-            
-            seventhDone = true;
-            auto stopTime6 = high_resolution_clock::now();
-            auto duration6 = std::chrono::duration_cast<nanoseconds>(stopTime6 - startTime6);
-            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration6)) << endl;
-
-            window.display();
-            window.clear();
-            window.draw(graphSprite);
-            window.draw(algorithmSprite);
-            window.draw(point1);
-            window.draw(point2);
-            window.draw(point3);
-            window.draw(point4);
-            window.draw(point5);
-            window.draw(point6);
-            window.draw(point7);
-            window.display();
-
-            auto startTime7 = high_resolution_clock::now();
-            if (eightDone == false)
-            {
-                averageGap = calcPrimes(99999999);
-                point8.move(((averageGap * step) + 140), ypos);
-                ypos -= 80;
-            };
-
-            eightDone = true;
-            auto stopTime7 = high_resolution_clock::now();
-            auto duration7 = std::chrono::duration_cast<nanoseconds>(stopTime7 - startTime7);
-            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration7)) << endl;
-  
-            window.display();
-            window.clear();
-            window.draw(graphSprite);
-            window.draw(algorithmSprite);
-            window.draw(point1);
-            window.draw(point2);
-            window.draw(point3);
-            window.draw(point4);
-            window.draw(point5);
-            window.draw(point6);
-            window.draw(point7);
-            window.draw(point8);
             window.display();
         }
     }
