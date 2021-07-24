@@ -3,8 +3,46 @@
 #include <algorithm>
 #include <numeric>
 #include <iostream>
+#include <iostream>
+#include <ctime>
+#include <ratio>
+#include <chrono>
+#include <string>
+#include <iomanip>
 
 using namespace std;
+using namespace std::chrono;
+
+string display(std::chrono::nanoseconds ns)
+{
+    using namespace std;
+    using namespace std::chrono;
+
+    typedef duration<int, ratio<86400>> days;
+
+    stringstream ss;
+    char fill = ss.fill();
+    ss.fill('0');
+
+    auto d = duration_cast<days>(ns);
+    ns -= d;
+    auto h = duration_cast<hours>(ns);
+    ns -= h;
+    auto m = duration_cast<minutes>(ns);
+    ns -= m;
+    auto s = duration_cast<seconds>(ns);
+    ns -= s;
+    auto ms = duration_cast<milliseconds>(ns);
+
+    ss  << setw(2) << d.count() << "d:"
+        << setw(2) << h.count() << "h:"
+        << setw(2) << m.count() << "m:"
+        << setw(2) << s.count() << "s:"
+        << setw(2) << ms.count() << "ms";
+
+    ss.fill(fill);
+    return ss.str();
+};
 
 bool IsPrime(unsigned long long int n)
 {
@@ -23,16 +61,48 @@ bool IsPrime(unsigned long long int n)
     return true;
 }
 
+double calcPrimes( unsigned long long int targetPrimes)
+{
+    vector<unsigned long long int> primes;
+    int first = 0;
+    int second = 1; 
+    double primeGaps = 0;
+    unsigned long long int numberLineExtended = 0;
+    unsigned long long int numofPrimes = 0;
+    double averageGap = 0;
+
+    while (true)
+    {
+        if (IsPrime(numberLineExtended))
+        {
+            numofPrimes++;
+            primes.push_back(numberLineExtended);
+        };
+
+        if (numofPrimes > targetPrimes)
+        {
+            break;
+        };
+        numberLineExtended++;
+    };
+
+    for (unsigned int i = 0; i < (primes.size() - 1); i++)
+    {
+        primeGaps += (primes[second] - primes[first]);
+        first += 1;
+        second += 1;
+    };
+    averageGap = (primeGaps / (targetPrimes+1));
+    cout << endl << "Average prime gap between 0 and " << (targetPrimes+1) << ": " << averageGap;
+    cout << endl << "Amount of numbers to find "  << (targetPrimes+1) << " primes: " << numberLineExtended << endl;
+    return averageGap;
+}; 
 int main()
 {
     //Declare window
     sf::RenderWindow window(sf::VideoMode(1920, 1080), "Graph drawer");
 
     //Declare variables
-    unsigned long long int numerLineExtended{ 0 };
-    unsigned long long int numofPrimes      { 0 };
-    vector<unsigned long long int> primes;
-
     bool firstDone  { false };
     bool secondDone { false };
     bool thirdDone  { false };
@@ -44,9 +114,6 @@ int main()
 
     int ypos         {780}; 
     int step         { 80};
-    int first        {  0};
-    int second       {  1};
-    double primeGaps {  0};
     double averageGap{  0};
   
     // Initiate textures
@@ -102,40 +169,19 @@ int main()
             window.clear();
             window.draw(graphSprite);
            
+            auto startTime = high_resolution_clock::now();
             if (firstDone == false)
             {
-                while (true)
-                {
-                    if (IsPrime(numerLineExtended))
-                    {
-                        numofPrimes++;
-                        primes.push_back(numerLineExtended);
-                    };
-
-                    if (numofPrimes > 9)
-                    {
-                        break;
-                    };
-                    numerLineExtended++;
-                };
-
-                for (unsigned int i = 0; i < (primes.size() -1); i++)
-                {
-                    primeGaps += (primes[second] - primes[first]);
-                    first += 1;
-                    second += 1;
-                };
-                averageGap = (primeGaps / 10);
-                cout << endl << "Average prime gap between 0 and 10: " << averageGap;
-                cout << endl << "Amount of numbers to find 10 primes: " << numerLineExtended;
+                averageGap = calcPrimes(9);
                 point1.move(((averageGap * step) + 140), ypos);
                 ypos -= 80;
             };
-            firstDone = true;
-            numofPrimes = 0; 
-            first = 0;
-            second = 1;
 
+            firstDone = true;
+            auto stopTime = high_resolution_clock::now();
+            auto duration = std::chrono::duration_cast<nanoseconds>(stopTime - startTime);
+            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration)) << endl;
+  
             window.display();
             window.clear();
             window.draw(graphSprite);
@@ -143,42 +189,19 @@ int main()
             window.draw(point1);
             window.display();
             
+            auto startTime1 = high_resolution_clock::now();
             if (secondDone == false)
             {
-
-                while (true)
-                {
-                    if (IsPrime(numerLineExtended))
-                    {
-                        numofPrimes++;
-                        primes.push_back(numerLineExtended);
-                    };
-
-                    if (numofPrimes > 99)
-                    {
-                        break;
-                    };
-                    numerLineExtended++;
-                };
-       
-                for (unsigned int i = 0; i < (primes.size() - 1); i++)
-                {
-                    primeGaps += (primes[second] - primes[first]);
-                    first += 1;
-                    second += 1;
-                };
-                averageGap = 0;
-                averageGap = (primeGaps / 100);
-                cout << endl << "Average prime gap between 0 and 100: " << averageGap;
-                cout << endl << "Amount of numbers to find 100 primes: " << numerLineExtended;
+                averageGap = calcPrimes(99);
                 point2.move(((averageGap * step) + 140), ypos);
-                ypos -= 70;
+                ypos -= 80;
             };
+            auto stopTime1 = high_resolution_clock::now();
+            auto duration1 = std::chrono::duration_cast<nanoseconds>(stopTime1 - startTime1);
+            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration1)) << endl;
+
             secondDone = true;
-            numofPrimes = 0;
-            first = 0;
-            second = 1;
-           
+        
             window.display();
             window.clear();
             window.draw(graphSprite);
@@ -187,42 +210,19 @@ int main()
             window.draw(point2);
             window.display();
             
+            auto startTime2 = high_resolution_clock::now();
             if (thirdDone == false)
             {
-
-                while (true)
-                {
-                    if (IsPrime(numerLineExtended))
-                    {
-                        numofPrimes++;
-                        primes.push_back(numerLineExtended);
-                    };
-
-                    if (numofPrimes > 999)
-                    {
-                        break;
-                    };
-                    numerLineExtended++;
-                };
-
-                for (unsigned int i = 0; i < (primes.size() - 1); i++)
-                {
-                    primeGaps += (primes[second] - primes[first]);
-                    first += 1;
-                    second += 1;
-                };
-                averageGap = 0;
-                averageGap = (primeGaps / 1000);
-                cout << endl << "Average prime gap between 0 and 1000: " << averageGap;
-                cout << endl << "Amount of numbers to find 1000 primes: " << numerLineExtended;
+                averageGap = calcPrimes(999);
                 point3.move(((averageGap * step) + 140), ypos);
-                ypos -= 70;
+                ypos -= 80;
             };
+
             thirdDone = true;
-            numofPrimes = 0;
-            first = 0;
-            second = 1;
-            
+            auto stopTime2 = high_resolution_clock::now();
+            auto duration2 = std::chrono::duration_cast<nanoseconds>(stopTime2 - startTime2);
+            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration2)) << endl;
+             
             window.display();
             window.clear();
             window.draw(graphSprite);
@@ -232,41 +232,17 @@ int main()
             window.draw(point3);
             window.display();
 
+            auto startTime3 = high_resolution_clock::now();
             if (fourthDone == false)
             {
-
-                while (true)
-                {
-                    if (IsPrime(numerLineExtended))
-                    {
-                        numofPrimes++;
-                        primes.push_back(numerLineExtended);
-                    };
-
-                    if (numofPrimes > 9999)
-                    {
-                        break;
-                    };
-                    numerLineExtended++;
-                };
-              
-                for (unsigned int i = 0; i < (primes.size() - 1); i++)
-                {
-                    primeGaps += (primes[second] - primes[first]);
-                    first += 1;
-                    second += 1;
-                };
-                averageGap = 0;
-                averageGap = (primeGaps / 10000);
-                cout << endl << "Average prime gap between 0 and 10,000: " << averageGap;
-                cout << endl << "Amount of numbers to find 10,000 primes: " << numerLineExtended;
+                averageGap = calcPrimes(9999);
                 point4.move(((averageGap * step) + 140), ypos);
-                ypos -= 70;
+                ypos -= 80;
             };
             fourthDone = true;
-            numofPrimes = 0; 
-            first = 0;
-            second = 1;
+            auto stopTime3 = high_resolution_clock::now();
+            auto duration3 = std::chrono::duration_cast<nanoseconds>(stopTime3 - startTime3);
+            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration3)) << endl;
 
             window.display();
             window.clear();
@@ -278,41 +254,17 @@ int main()
             window.draw(point4);
             window.display();
 
+            auto startTime4 = high_resolution_clock::now();
             if (fifthDone == false)
             {
-
-                while (true)
-                {
-                    if (IsPrime(numerLineExtended))
-                    {
-                        numofPrimes++;
-                        primes.push_back(numerLineExtended);
-                    };
-
-                    if (numofPrimes > 99999)
-                    {
-                        break;
-                    };
-                    numerLineExtended++;
-                };
-            
-                for (unsigned int i = 0; i < (primes.size() - 1); i++)
-                {
-                    primeGaps += (primes[second] - primes[first]);
-                    first += 1;
-                    second += 1;
-                };
-                averageGap = 0;
-                averageGap = (primeGaps / 100000);
-                cout << endl << "Average prime gap between 0 and 100,000: " << averageGap;
-                cout << endl << "Amount of numbers to find 100,000 primes: " << numerLineExtended;
+                averageGap = calcPrimes(99999);
                 point5.move(((averageGap * step) + 140), ypos);
-                ypos -= 90;
+                ypos -= 80;
             };
             fifthDone = true;
-            numofPrimes = 0;
-            first = 0;
-            second = 1;
+            auto stopTime4 = high_resolution_clock::now();
+            auto duration4 = std::chrono::duration_cast<nanoseconds>(stopTime4 - startTime4);
+            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration4)) << endl;
 
             window.display();
             window.clear();
@@ -325,41 +277,19 @@ int main()
             window.draw(point5);
             window.display();
 
+
+            auto startTime5 = high_resolution_clock::now();
             if (sixthDone == false)
             {
-
-                while (true)
-                {
-                    if (IsPrime(numerLineExtended))
-                    {
-                        numofPrimes++;
-                        primes.push_back(numerLineExtended);
-                    };
-
-                    if (numofPrimes > 999999)
-                    {
-                        break;
-                    };
-                    numerLineExtended++;
-                };
-        
-                for (unsigned int i = 0; i < (primes.size() - 1); i++)
-                {
-                    primeGaps += (primes[second] - primes[first]);
-                    first += 1;
-                    second += 1;
-                };
-                averageGap = 0;
-                averageGap = (primeGaps / 1000000);
-                cout << endl << "Average prime gap between 0 and 1,000,000: " << averageGap;
-                cout << endl << "Amount of numbers to find 1,000,000 primes: " << numerLineExtended;
+                averageGap = calcPrimes(999999);
                 point6.move(((averageGap * step) + 140), ypos);
-                ypos -= 70;
+                ypos -= 80;
             };
             sixthDone = true;
-            numofPrimes = 0;
-            first = 0;
-            second = 1;
+
+            auto stopTime5 = high_resolution_clock::now();
+            auto duration5 = std::chrono::duration_cast<nanoseconds>(stopTime5 - startTime5);
+            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration5)) << endl;
           
             window.display();
             window.clear();
@@ -373,43 +303,18 @@ int main()
             window.draw(point6);
             window.display();
             
+            auto startTime6 = high_resolution_clock::now();
             if (seventhDone == false)
             {
-               
-                while (true)
-                {
-                    if (IsPrime(numerLineExtended))
-                    {
-                        numofPrimes++;
-                        primes.push_back(numerLineExtended);
-                    };
-
-                    if (numofPrimes > 9999999)
-                    {
-                        break;
-                    };
-                    numerLineExtended++;
-                };
-               
-                for (unsigned int i = 0; i < (primes.size() - 1); i++)
-                {
-                    primeGaps += (primes[second] - primes[first]);
-                    first += 1;
-                    second += 1;
-                };
-                
-                averageGap = 0;
-                averageGap = (primeGaps / 10000000);
-                cout << endl << "Average prime gap between 0 and 10,000,000: " << averageGap;
-                cout << endl << "Amount of numbers to find 10,000,000 primes: " << numerLineExtended;
+                averageGap = calcPrimes(9999999);
                 point7.move(((averageGap * step) + 140), ypos);
-                ypos -= 70;
+                ypos -= 80;
             };
             
             seventhDone = true;
-            numofPrimes = 0;
-            first = 0;
-            second = 1;
+            auto stopTime6 = high_resolution_clock::now();
+            auto duration6 = std::chrono::duration_cast<nanoseconds>(stopTime6 - startTime6);
+            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration6)) << endl;
 
             window.display();
             window.clear();
@@ -424,44 +329,19 @@ int main()
             window.draw(point7);
             window.display();
 
+            auto startTime7 = high_resolution_clock::now();
             if (eightDone == false)
             {
-
-                while (true)
-                {
-                    if (IsPrime(numerLineExtended))
-                    {
-                        numofPrimes++;
-                        primes.push_back(numerLineExtended);
-                    };
-
-                    if (numofPrimes > 99999999)
-                    {
-                        break;
-                    };
-                    numerLineExtended++;
-                };
-
-                for (unsigned int i = 0; i < (primes.size() - 1); i++)
-                {
-                    primeGaps += (primes[second] - primes[first]);
-                    first += 1;
-                    second += 1;
-                };
-
-                averageGap = 0;
-                averageGap = (primeGaps / 100000000);
-                cout << endl << "Average prime gap between 0 and 100,000,000: " << averageGap;
-                cout << endl << "Amount of numbers to find 100,000,000 primes: " << numerLineExtended;
+                averageGap = calcPrimes(99999999);
                 point8.move(((averageGap * step) + 140), ypos);
-                ypos -= 70;
+                ypos -= 80;
             };
 
             eightDone = true;
-            numofPrimes = 0;
-            first = 0;
-            second = 1;
-
+            auto stopTime7 = high_resolution_clock::now();
+            auto duration7 = std::chrono::duration_cast<nanoseconds>(stopTime7 - startTime7);
+            std::cout << "Operation took: " << display(std::chrono::nanoseconds(duration7)) << endl;
+  
             window.display();
             window.clear();
             window.draw(graphSprite);
